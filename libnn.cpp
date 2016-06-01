@@ -41,7 +41,7 @@ Neuron::Neuron () :
 HiddenNeuron::HiddenNeuron (float learn_rate)
 {
     learnRate = learn_rate;
-    weights.push_back(1.0f);
+    weights.push_back(-1.0f);
 }
 
 void HiddenNeuron::forward()
@@ -60,16 +60,17 @@ void HiddenNeuron::forward()
 }
 
 
-void HiddenNeuron::back()
+float HiddenNeuron::back()
 {
 
-    weights[0] = weights[0] + learnRate * error * 1; // bias
+    //weights[0] = weights[0] + learnRate * error * 1; // bias
     
-    for(int i = 0; i < upper.size(); i++)
+    for(int i = 1; i < upper.size(); i++)
     {
         upper[i]->error += deltaSigmoid (output) * error;
         weights[i+1] = weights[i+1] + learnRate * upper[i]->error * upper[i]->output;
     }
+    return upper[0]->error;
     
 }
 
@@ -105,11 +106,11 @@ void InputNeuron::forward()
     
 }
 
-void InputNeuron::back()
+float InputNeuron::back()
 {
-    weights[0] = weights[0] + learnRate * error * 1; // bias
+    //weights[0] = weights[0] + learnRate * error * 1; // bias
     weights[1] = weights[1] + learnRate * error * input;
-
+    return deltaSigmoid(output) + error;
 }
 
 void InputNeuron::setInput(float value)
@@ -159,13 +160,14 @@ void NLayer::forward()
     }
 }
 
-void NLayer::back()
+std::vector<float> NLayer::back()
 {
+    std::vector<float> result(neurons.size());
     for(int i = 0; i < neurons.size(); i++)
     {
         neurons[i]->back();
     }
-
+    return result;
 }
 
 void NLayer::setInputs(std::vector<float> inputs)
@@ -281,7 +283,7 @@ void NNet::init(int inputs_n, int hidden_layers_n, int hidden_neurons_n, int out
     // link all neurons from last hidden layer to every output layer's neuron.
     for(int i= 0; i < outputs_n; i++) {
         for(int j=0; j < hidden_neurons_n; j++) {
-            outputLayer.neurons[i]->addLink(hiddenLayers.back().neurons[i]);
+            outputLayer.neurons[i]->addLink(hiddenLayers.back().neurons[j]);
         }
     }
     
@@ -290,7 +292,7 @@ void NNet::init(int inputs_n, int hidden_layers_n, int hidden_neurons_n, int out
 }
 
 
-std::vector<float> NNet::forward(std::vector<float> &inputs)
+std::vector<float> NNet::forward(std::vector<float> inputs)
 {
     inputLayer.setInputs(inputs);
     inputLayer.forward();
@@ -304,7 +306,7 @@ std::vector<float> NNet::forward(std::vector<float> &inputs)
     
 }
 
-void NNet::back(std::vector<float> desired_output)
+std::vector<float> NNet::back(std::vector<float> desired_output)
 {
     
     // clear errors form every layer
@@ -324,7 +326,7 @@ void NNet::back(std::vector<float> desired_output)
     for(int i = (int)hiddenLayers.size() - 1; i >= 0 ; i-- )
         hiddenLayers[i].back();
     
-    inputLayer.back();
+    return inputLayer.back();
 
 }
 

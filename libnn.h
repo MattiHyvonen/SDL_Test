@@ -37,7 +37,7 @@ public:
     Neuron();
     
     virtual void forward(void) = 0;
-    virtual void back(void) = 0;
+    virtual float back(void) = 0;
     virtual void setInput(float value) = 0;
     virtual void addLink(Neuron* neuron) = 0;
     
@@ -68,7 +68,7 @@ public:
     std::vector<Neuron*> upper;
     
     void forward(void);
-    void back(void);
+    float back(void);
     void setInput(float value);
     void addLink(Neuron* neuron);
 };
@@ -81,7 +81,7 @@ public:
     float input;
     
     void forward(void);
-    void back(void);
+    float back(void);
     void setInput(float value);
     void addLink(Neuron* neuron);
     
@@ -97,7 +97,7 @@ public:
     
     void init(int neurons_n, bool is_input_layer = false);
     void forward();
-    void back();
+    std::vector<float> back();
     void clearErrors();
     std::vector<NeuronData> getNeuronData();
 
@@ -133,8 +133,8 @@ public:
     
     void init(int inputs_n, int hidden_layers_n, int hidden_neurons_n, int outputs_n);
     
-    std::vector<float> forward(std::vector<float>& inputs);
-    void back(std::vector<float> desired_output);
+    std::vector<float> forward(std::vector<float> inputs);
+    std::vector<float> back(std::vector<float> desired_output);
     void link(linkData);
     void link(int source_layer, int source_id, int dest_layer, int dest_id);
     void printSize();
