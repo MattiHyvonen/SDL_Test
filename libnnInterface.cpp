@@ -146,6 +146,29 @@ namespace nnInterface {
 		kouluta = value;
 	}
 
+    void LaskeDesiredOut (std::vector<float> nykyinenPaikka)
+    {
+        std::vector<float> erot(tilanteet.size());
+        
+        for(int i = 0; i < tilanteet.size(); i++)
+            erot[i] = vektorienEro(nn_input, tilanteet[i].inputData);
+        
+        float pieninEro = 10000000;
+        float lahinTilanneId;
+        
+        for(int i = 0; i < erot.size(); i++)
+            if(erot[i] < pieninEro) {
+                pieninEro = erot[i];
+                lahinTilanneId = i;
+            }
+        
+        nn_desired_out = tilanteet[lahinTilanneId].desiredOutData;
+        
+        for(int i = 0; i < nykyinenPaikka.size(); i++)
+            nn_desired_out[i] = nykyinenPaikka[i] - nn_desired_out[i];
+        
+    
+    }
 
 	void Close() {
 		nn_stop = true;

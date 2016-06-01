@@ -169,11 +169,13 @@ void draw() {
 	SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 	SDL_RenderClear(renderer);
 
+    SDL_Rect tmp = rect.get();
 	SDL_SetRenderDrawColor(renderer, 200, 40, 0, 255);
-	SDL_RenderFillRect(renderer, &(rect.get()));
+	SDL_RenderFillRect(renderer, &(tmp));
 
+    tmp = cursor.get();
 	SDL_SetRenderDrawColor(renderer, 0, 255, 0, 20);
-	SDL_RenderFillRect(renderer, &(cursor.get()));
+	SDL_RenderFillRect(renderer, &(tmp));
 
 	SDL_RenderPresent(renderer);
 }
