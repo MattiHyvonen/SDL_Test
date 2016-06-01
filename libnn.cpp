@@ -203,7 +203,7 @@ void NLayer::setError(std::vector<float> errors)
     }
     else
     {
-        std::cerr << "wrong errors vector size!!\n";
+        std::cerr << "wrong errors vector size!! (" << errors.size() << ")\n";
     }
 
 }

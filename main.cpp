@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <thread>
 #include <iostream>
+#include <vector>
 
 #include "random.h"
 #include "dClock.h"
@@ -69,6 +70,11 @@ struct cursorT{
 } cursor;
 
 
+enum moodiT{
+	KOULUTETAAN, KATSELLAAN, MUOKATAAN, ASETA_TOIVE
+} moodi;
+
+
 void handleEvent(SDL_Event e) {
 	
 	const float XY_MUUTOS = 1.0f / 50;
@@ -90,23 +96,61 @@ void handleEvent(SDL_Event e) {
 
 	else if (e.type == SDL_KEYDOWN) {
 		switch (e.key.keysym.sym) {
+		
+		//tallenna tilanne
+		case SDLK_RETURN:
+			if (moodi == MUOKATAAN) {
+				moodi = ASETA_TOIVE;
+				std::cout << "asetetaan toive\n";
+			}
+			break;
+
+		//vaihda moodia
+		case SDLK_TAB:
+			if (moodi == MUOKATAAN) {
+				moodi = KATSELLAAN;
+				std::cout << "katsellaan\n";
+			}
+			else if (moodi == KATSELLAAN) {
+				moodi = MUOKATAAN;
+				std::cout << "muokataan\n";
+			}
+			break;		
+		case SDLK_SPACE:
+			if (moodi == MUOKATAAN) {
+				moodi = KOULUTETAAN;
+				std::cout << "koulutetaan\n";
+			}
+			else if (moodi == KOULUTETAAN) {
+				moodi = MUOKATAAN;
+				std::cout << "muokataan\n";
+			}
+			break;
+
+		//muuta neliötä
+		case SDLK_z:
+			//arvonta
+			rect.x = randf(0, 1);
+			rect.y = randf(0, 1);
+			rect.size = randf(0, 1);
+			break;
 		case SDLK_LEFT:
-			rect.x -= XY_MUUTOS;
+			if(moodi == MUOKATAAN) rect.x -= XY_MUUTOS;
 			break;
 		case SDLK_RIGHT:
-			rect.x += XY_MUUTOS;
+			if (moodi == MUOKATAAN) rect.x += XY_MUUTOS;
 			break;
 		case SDLK_UP:
-			rect.y -= XY_MUUTOS;
+			if (moodi == MUOKATAAN) rect.y -= XY_MUUTOS;
 			break;
 		case SDLK_DOWN:
-			rect.y += XY_MUUTOS;
+			if (moodi == MUOKATAAN) rect.y += XY_MUUTOS;
 			break;
-		case SDLK_KP_PLUS:
-			rect.size += SIZE_MUUTOS;
+		case SDLK_PERIOD:
+			if (moodi == MUOKATAAN) rect.size += SIZE_MUUTOS;
 			break;
-		case SDLK_KP_MINUS:
-			rect.size -= SIZE_MUUTOS; 
+		case SDLK_COMMA:
+			if (moodi == MUOKATAAN) rect.size -= SIZE_MUUTOS;
 			break;
 		}
 	
@@ -119,15 +163,6 @@ void handleEvent(SDL_Event e) {
 
 }
 
-
-void initialize() {
-	
-	SDL_Init(SDL_INIT_VIDEO);
-	window = SDL_CreateWindow("events", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, S.w, S.h, SDL_WINDOW_SHOWN);
-	renderer = SDL_CreateRenderer(window, -1, 0);
-
-	nnInterface::Init();
-}
 
 
 void draw() {
@@ -144,6 +179,15 @@ void draw() {
 }
 
 
+void initialize() {
+
+	SDL_Init(SDL_INIT_VIDEO);
+	window = SDL_CreateWindow("events", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, S.w, S.h, SDL_WINDOW_SHOWN);
+	renderer = SDL_CreateRenderer(window, -1, 0);
+
+	nnInterface::Init();
+}
+
 
 int main(int argc, char* argv[]) {
 
@@ -152,6 +196,8 @@ int main(int argc, char* argv[]) {
 	dClock t;
 
 	std::thread nnThread(nnInterface::StartRoutine);
+
+	moodi = MUOKATAAN;
 
 	while (!quit) {
 		
@@ -162,6 +208,61 @@ int main(int argc, char* argv[]) {
 		while (SDL_PollEvent(&e))
 			handleEvent(e);
 		
+		std::vector<float> inputs(2);
+		inputs[0] = mouse.x;
+		inputs[1] = mouse.y;
+
+		std::vector<float> outputs;
+		std::vector <float> desiredOuts(3);
+
+		desiredOuts[0] = rect.x;
+		desiredOuts[1] = rect.y;
+		desiredOuts[2] = rect.size;
+		
+		nnInterface::mtx.lock();
+		
+		if (moodi == KOULUTETAAN) {
+			nnInterface::SetKouluta(true);
+			while (outputs.empty()) {
+				outputs = nnInterface::GetOutput();
+				//std::cout << "outputs oli tyhjä\n";
+			}
+			//std::cout << "tuli output\n";
+			rect.x = outputs[0];
+			rect.y = outputs[1];
+			rect.size = outputs[2];
+		}
+		else nnInterface::SetKouluta(false);
+
+		if (moodi == KATSELLAAN) {
+			
+			//annetaan inputit nnetille
+			nnInterface::SetInput(inputs);
+
+			//haetaan vaste nnetiltä
+			while (outputs.empty()) {
+				outputs = nnInterface::GetOutput();
+				//std::cout << "outputs oli tyhjä\n";
+			}
+			//std::cout << "tuli output\n";
+			
+			//laitetaan saadut arvot neliöön
+			rect.x = outputs[0];
+			rect.y = outputs[1];
+			rect.size = outputs[2];
+		}
+		
+		if (moodi == ASETA_TOIVE) {
+			nnInterface::SetInput(inputs);
+			nnInterface::SetDesiredOut(desiredOuts);
+			moodi = MUOKATAAN;
+		}
+
+		if (moodi == MUOKATAAN) {//ks handle event
+		}
+
+		nnInterface::mtx.unlock();
+
 		//draw
 		draw();
 

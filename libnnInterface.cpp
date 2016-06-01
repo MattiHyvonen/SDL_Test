@@ -7,6 +7,8 @@ namespace nnInterface {
 
 	NNet nn_net;
 
+	std::vector<tilanne> tilanteet;
+
 	std::vector<float> nn_output;
 	std::vector<float> result;
 
@@ -18,23 +20,27 @@ namespace nnInterface {
 	std::atomic<bool> desiredWritten;
 	std::atomic<bool> nn_stop;
 	std::atomic<bool> update;
+	std::atomic<bool> kouluta;
 
 	std::mutex mtx;
 
 	dClock timer;
 
+	int in = 2;
+	int hid = 0;
+	int out = 3;
+
 	void Init()
 	{
 
 		// count num_inputs && num_hidden_neurons dynamically
-		int in = 2;
-		int hid = 3;
-		int out = 3;
-
 		nn_desired_out = std::vector<float>(out, 0.5f);
 		nn_input = std::vector<float>(in, 0.5f);
 		nn_output = std::vector<float>(out, 0.5f);
 		result = std::vector<float>(out, 0.5f);
+
+		for (int i = in; i > 0; i--)
+			hid += i;
 
 		nn_net.init(in, 1, hid, out);
 
@@ -54,35 +60,60 @@ namespace nnInterface {
 
 		// aloita looppi
 		nn_stop = false;
+
 		while (!nn_stop) {
 			// back propagation
+			if (!kouluta) {
+				mtx.lock();
+				if (desiredWritten == true) {
+					tilanteet.push_back(tilanne(nn_input, nn_desired_out));
+					
+					//voisi kirjoittaa tiedostoon tässä välissä
+					desiredWritten = false;
+				}
+				mtx.unlock();
 
-			mtx.lock();
-			if (desiredWritten == true) {
-				nn_net.back(nn_desired_out);
-				desiredWritten = false;
+				std::this_thread::yield();
+
+				mtx.lock();
+				// feed forward
+				if (inWritten == true) {
+					nn_output = nn_net.forward(nn_input);
+					if (nn_output.size() > out) {
+						nn_output.resize(out);
+						std::cerr << "liian iso output\n";						
+					}
+					outRead = false;
+				}
+				mtx.unlock();
+				std::this_thread::yield();
 			}
-			mtx.unlock();
 
-			std::this_thread::yield();
-
-			mtx.lock();
-			// feed forward
-			if (inWritten == true) {
-				nn_output = nn_net.forward(nn_input);
-				outRead = false;
+			else{ //koulutetaan annetuilla tilanteilla
+				if (tilanteet.size() < 2)
+					kouluta = false;
+				else {
+					mtx.lock();
+					for (int i = 0; i < tilanteet.size(); i++) {
+						nn_net.forward(tilanteet[i].inputData);
+						nn_net.back(tilanteet[i].desiredOutData);
+					}
+					nn_output = nn_net.forward(tilanteet.back().inputData);
+					outRead = false;
+					mtx.unlock();
+					std::this_thread::yield();
+				}
 			}
-			mtx.unlock();
-			//    }
-			std::this_thread::yield();
 		}
 	}
+
 
 	void SetInput(std::vector<float> input_)
 	{
 		nn_input = input_;
 		inWritten = true;
 	}
+
 
 	std::vector<float> GetOutput()
 	{
@@ -91,7 +122,7 @@ namespace nnInterface {
 			return result;
 		}
 
-		std::cout << "teach\n";
+		//std::cout << "teach\n";
 
 		outRead = true;
 		result = nn_output;
@@ -99,12 +130,20 @@ namespace nnInterface {
 
 	}
 
+
 	void SetDesiredOut(std::vector<float> desired_out_)
 	{
+		if (desired_out_.size() > out)
+			desired_out_.resize(out);
 
 		nn_desired_out = desired_out_;
 		desiredWritten = true;
 
+	}
+
+
+	void SetKouluta(bool value) {
+		kouluta = value;
 	}
 
 
