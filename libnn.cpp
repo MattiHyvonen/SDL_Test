@@ -41,7 +41,7 @@ Neuron::Neuron () :
 HiddenNeuron::HiddenNeuron (float learn_rate)
 {
     learnRate = learn_rate;
-    weights.push_back(-1.0f);
+    weights.push_back(0.0f);
 }
 
 void HiddenNeuron::forward()
@@ -197,7 +197,7 @@ void NLayer::setError(std::vector<float> errors)
     if (errors.size() == neurons.size()) {
         for (int i = 0; i < neurons.size(); i++) {
             neurons[i]->error =
-            deltaSigmoid(neurons[i]->output) *
+            //deltaSigmoid(neurons[i]->output) *
             (errors[i] - neurons[i]->output);
         }
     }

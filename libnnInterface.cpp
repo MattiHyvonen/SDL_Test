@@ -21,7 +21,6 @@ namespace nnInterface {
 	std::atomic<bool> desiredWritten;
 	std::atomic<bool> nn_stop;
 	std::atomic<bool> update;
-	std::atomic<bool> kouluta;
 
 	std::mutex mtx;
 
@@ -64,11 +63,9 @@ namespace nnInterface {
 
 		while (!nn_stop) {
 			// back propagation
-			if (!kouluta) {
 				mtx.lock();
 				if (desiredWritten == true) {
-					tilanteet.push_back(tilanne(nn_input, nn_desired_out));
-					
+                    nn_net.back(nn_desired_out);
 					//voisi kirjoittaa tiedostoon tässä välissä
 					desiredWritten = false;
 				}
@@ -88,23 +85,7 @@ namespace nnInterface {
 				}
 				mtx.unlock();
 				std::this_thread::yield();
-			}
 
-			else{ //koulutetaan annetuilla tilanteilla
-				if (tilanteet.size() < 2)
-					kouluta = false;
-				else {
-					mtx.lock();
-					for (int i = 0; i < tilanteet.size(); i++) {
-						nn_net.forward(tilanteet[i].inputData);
-						nn_net.back(tilanteet[i].desiredOutData);
-					}
-					nn_output = nn_net.forward(tilanteet.back().inputData);
-					outRead = false;
-					mtx.unlock();
-					std::this_thread::yield();
-				}
-			}
 		}
 	}
 
@@ -130,29 +111,28 @@ namespace nnInterface {
 		return result;
 
 	}
-
-
-	void SetDesiredOut(std::vector<float> desired_out_)
-	{
-		if (desired_out_.size() > out)
-			desired_out_.resize(out);
-
-		nn_desired_out = desired_out_;
-		desiredWritten = true;
-
-	}
-
-
-	void SetKouluta(bool value) {
-		kouluta = value;
-	}
+    
+    void TeeTilanne (std::vector<float> input, std::vector<float> output)
+    {
+        std::cout << "input: " << input[0] << " " << input[1] << "\n";
+        std::cout << "output: " << output[0] << " " << output[1] << " "<< output[2]<< "\n";
+        
+        tilanteet.push_back(tilanne(input,output));
+    
+    
+    }
 
     void LaskeDesiredOut (std::vector<float> nykyinenPaikka)
     {
         std::vector<float> erot(tilanteet.size());
         
-        for(int i = 0; i < tilanteet.size(); i++)
-            erot[i] = vektorienEro(nn_input, tilanteet[i].inputData);
+        std::this_thread::yield();
+        
+        
+        if(nn_input.size() == in) {
+            for(int i = 0; i < tilanteet.size(); i++) {
+                erot[i] = vektorienEro(nn_input, tilanteet[i].inputData);
+            }
         
         float pieninEro = 10000000;
         int lahinTilanneId = 0;
@@ -162,14 +142,28 @@ namespace nnInterface {
                 pieninEro = erot[i];
                 lahinTilanneId = i;
             }
+            std::cout << "\n";
         
-        nn_desired_out = tilanteet[lahinTilanneId].desiredOutData;
+        std::cout << "pieninEro: " << pieninEro << "\n";
+        std::cout << "desired: " ;
+            
+
+            
+        for(int i = 0; i < nykyinenPaikka.size(); i++) {
+            nn_desired_out[i] =  (tilanteet[lahinTilanneId].desiredOutData[i] - nykyinenPaikka[i]) * 10;
+            bound(nn_desired_out[i],-1,1);
+            //nn_desired_out[i] = tilanteet[lahinTilanneId].desiredOutData[i];
+            std::cout << nn_desired_out[i] << " ";
+        }
         
-        for(int i = 0; i < nykyinenPaikka.size(); i++)
-            nn_desired_out[i] = nykyinenPaikka[i] - nn_desired_out[i];
+        std::cout << "\n";
         
         desiredWritten = true;
-    
+        }
+        else
+            std::cout << "vaaran kokoinen nn_input: " << nn_input.size();
+        
+        std::cout << "\n";
     }
 
 	void Close() {

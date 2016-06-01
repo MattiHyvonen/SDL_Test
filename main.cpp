@@ -89,8 +89,8 @@ void handleEvent(SDL_Event e) {
 		
 		SDL_GetMouseState(&(mouse.x_px) , &(mouse.y_px) );
 
-		mouse.x = mouse.x_px / S.w;
-		mouse.y = mouse.y_px / S.h;
+		mouse.x = (float)mouse.x_px / S.w;
+		mouse.y = (float)mouse.y_px / S.h;
 	}
 
 
@@ -116,16 +116,6 @@ void handleEvent(SDL_Event e) {
 				std::cout << "muokataan\n";
 			}
 			break;		
-		case SDLK_SPACE:
-			if (moodi == MUOKATAAN) {
-				moodi = KOULUTETAAN;
-				std::cout << "koulutetaan\n";
-			}
-			else if (moodi == KOULUTETAAN) {
-				moodi = MUOKATAAN;
-				std::cout << "muokataan\n";
-			}
-			break;
 
 		//muuta neliötä
 		case SDLK_z:
@@ -223,19 +213,6 @@ int main(int argc, char* argv[]) {
 		
 		nnInterface::mtx.lock();
 		
-		if (moodi == KOULUTETAAN) {
-			nnInterface::SetKouluta(true);
-			while (outputs.empty()) {
-				outputs = nnInterface::GetOutput();
-				//std::cout << "outputs oli tyhjä\n";
-			}
-			//std::cout << "tuli output\n";
-			rect.x = outputs[0];
-			rect.y = outputs[1];
-			rect.size = outputs[2];
-		}
-		else nnInterface::SetKouluta(false);
-
 		if (moodi == KATSELLAAN) {
 			
 			//annetaan inputit nnetille
@@ -247,17 +224,36 @@ int main(int argc, char* argv[]) {
 				//std::cout << "outputs oli tyhjä\n";
 			}
 			//std::cout << "tuli output\n";
+
+            std::cout << "outputs: " << outputs[0] << " " << outputs[1] << " " << outputs[3] << "\n";
 			
+            //skaalaa
+            for (int i = 0; i < outputs.size(); i++)
+                outputs[i] = outputs[i] * 2 - 1;
+            
 			//laitetaan saadut arvot neliöön
-			rect.x = outputs[0];
-			rect.y = outputs[1];
-			rect.size = outputs[2];
+			rect.x += outputs[0] * 0.05f;
+			rect.y += outputs[1] * 0.05f;
+			rect.size += outputs[2] * 0.05f;
+            
+            bound(rect.x,0,1);
+            bound(rect.y,0,1);
+            bound(rect.size,0.1,1);
+            
+            
+            std::vector<float> nykyinenPaikka(3);
+            nykyinenPaikka[0] = rect.x;
+            nykyinenPaikka[1] = rect.y;
+            nykyinenPaikka[2] = rect.size;
+            
+            nnInterface::LaskeDesiredOut(nykyinenPaikka);
+            
 		}
 		
 		if (moodi == ASETA_TOIVE) {
-			nnInterface::SetInput(inputs);
-			nnInterface::SetDesiredOut(desiredOuts);
-			moodi = MUOKATAAN;
+            nnInterface::SetInput(inputs);
+            nnInterface::TeeTilanne(inputs, desiredOuts);
+            moodi = MUOKATAAN;
 		}
 
 		if (moodi == MUOKATAAN) {//ks handle event

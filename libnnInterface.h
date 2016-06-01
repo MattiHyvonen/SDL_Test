@@ -83,6 +83,7 @@ namespace nnInterface {
         
         tilanne(){}
         tilanne(std::vector<float> input, std::vector<float> desired) : inputData(input), desiredOutData(desired) {}
+
         std::string toString() {
             std::string vastaus = "inputs: ";
             for (int i = 0; i < inputData.size(); i++) {
@@ -105,11 +106,9 @@ namespace nnInterface {
     
     std::vector<float> GetOutput();
     
-    void SetDesiredOut(std::vector<float> desired_out_);
+    void TeeTilanne(std::vector<float> input, std::vector<float> output);
     
-    void SetKouluta(bool);
-    
-    void laskeDesiredOut();
+    void LaskeDesiredOut(std::vector<float> nykyinenPaikka);
     
     void Close();
 }

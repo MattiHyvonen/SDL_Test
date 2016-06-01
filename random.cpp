@@ -2,7 +2,7 @@
 
 float fabs(float f) {
     if (f > 0) return f;
-    else return (f*(-1));
+    return (f*(-1));
 }
 
 
@@ -24,9 +24,9 @@ void wrap(float& value, float min, float max) {
 }
 
 
-float vektorienEro(std::vector<float>& A, std::vector<float>& B) {
+float vektorienEro(std::vector<float> A, std::vector<float> B) {
     
-    if (A.size() == B.size() || A.empty() || B.empty() )
+    if (A.size() != B.size() || A.empty() || B.empty() )
         return -1;
     
     float summa = 0;
@@ -35,6 +35,6 @@ float vektorienEro(std::vector<float>& A, std::vector<float>& B) {
         summa += fabs(A[i] - B[i]);
     }
     
-    summa /= A.size();
+    //summa /= (float)A.size();
     return summa;
 }
