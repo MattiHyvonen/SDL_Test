@@ -2,6 +2,7 @@
 #include "libnnInterface.h"
 #include <iostream>
 #include "dClock.h"
+#include "random.h"
 
 namespace nnInterface {
 
@@ -154,7 +155,7 @@ namespace nnInterface {
             erot[i] = vektorienEro(nn_input, tilanteet[i].inputData);
         
         float pieninEro = 10000000;
-        float lahinTilanneId;
+        int lahinTilanneId = 0;
         
         for(int i = 0; i < erot.size(); i++)
             if(erot[i] < pieninEro) {
@@ -167,6 +168,7 @@ namespace nnInterface {
         for(int i = 0; i < nykyinenPaikka.size(); i++)
             nn_desired_out[i] = nykyinenPaikka[i] - nn_desired_out[i];
         
+        desiredWritten = true;
     
     }
 
